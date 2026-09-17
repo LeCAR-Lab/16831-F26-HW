@@ -1,0 +1,11 @@
+numpy==1.25.2
+mujoco==2.2.1
+gym[box2d]==0.25.1
+# gym==0.25.1
+tensorboard==2.10.0
+tensorboardX==2.5.1
+matplotlib
+torch==1.12.1
+pyvirtualdisplay
+IPython
+gym-notebook-wrapper
