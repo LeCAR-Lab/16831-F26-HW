@@ -1,0 +1,94 @@
+\documentclass{article}
+\usepackage[letterpaper,margin=0.95in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx,parskip,fancyhdr}
+\usepackage[most]{tcolorbox}
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{CMU 16-831}\chead{Introduction to Robot Learning}\rhead{Fall 2026}
+\cfoot{\thepage}
+\setlength{\headheight}{14pt}
+\newtcolorbox{answer}[1]{colback=white,colframe=black!60,title={#1},height=4.5cm}
+% For each plot, change {example-image-a} to your image path, such as
+% {figures/q3_reacher.png}. Keep the image dimensions and answer blocks unchanged.
+\begin{document}
+\begin{center}{\Large Assignment 4: Model-Based Reinforcement Learning}\end{center}
+\textbf{Andrew ID:} YOUR ID\par
+\textbf{Collaborators (including AI tools, if applicable):} YOUR COLLABORATORS\par
+\textbf{Total: 15 points.} Keep the answer and plot sizes unchanged.
+\section*{Problem 1: Dynamics Model Training (3.75 points)}
+\begin{answer}{Which model performs best, and why?}\end{answer}
+\begin{tcolorbox}[colback=white,colframe=black!60,title={1 hidden layer, 32 units, 500 training steps},height=9.5cm]
+\centering
+% Replace example-image-a with the path to your plot.
+\includegraphics[width=\linewidth,height=8cm,keepaspectratio]{example-image-a}
+\end{tcolorbox}
+\begin{tcolorbox}[colback=white,colframe=black!60,title={2 hidden layers, 250 units, 5 training steps},height=9.5cm]
+\centering
+% Replace example-image-a with the path to your plot.
+\includegraphics[width=\linewidth,height=8cm,keepaspectratio]{example-image-a}
+\end{tcolorbox}
+\begin{tcolorbox}[colback=white,colframe=black!60,title={2 hidden layers, 250 units, 500 training steps},height=9.5cm]
+\centering
+% Replace example-image-a with the path to your plot.
+\includegraphics[width=\linewidth,height=8cm,keepaspectratio]{example-image-a}
+\end{tcolorbox}
+\section*{Problem 2: Action Selection (3.75 points)}
+\begin{tcolorbox}[colback=white,colframe=black!60,title={Random actions versus MPC: training and evaluation returns},height=9.5cm]
+\centering
+% Replace example-image-a with the path to your plot.
+\includegraphics[width=\linewidth,height=8cm,keepaspectratio]{example-image-a}
+\end{tcolorbox}
+\section*{Problem 3: Iterative Model Training (3.75 points)}
+\begin{tcolorbox}[colback=white,colframe=black!60,title={Obstacles learning curve},height=9.5cm]
+\centering
+% Replace example-image-a with the path to your plot.
+\includegraphics[width=\linewidth,height=8cm,keepaspectratio]{example-image-a}
+\end{tcolorbox}
+\begin{tcolorbox}[colback=white,colframe=black!60,title={Reacher learning curve},height=9.5cm]
+\centering
+% Replace example-image-a with the path to your plot.
+\includegraphics[width=\linewidth,height=8cm,keepaspectratio]{example-image-a}
+\end{tcolorbox}
+\begin{tcolorbox}[colback=white,colframe=black!60,title={Cheetah learning curve},height=9.5cm]
+\centering
+% Replace example-image-a with the path to your plot.
+\includegraphics[width=\linewidth,height=8cm,keepaspectratio]{example-image-a}
+\end{tcolorbox}
+\clearpage
+\section*{Problem 4: Hyperparameter Comparison and Discussion (3.75 points total)}
+\subsection*{Hyperparameter Comparison (3 points)}
+For each comparison, describe the observed trend and explain it in the description block directly below the plot.
+\begin{tcolorbox}[colback=white,colframe=black!60,title={Planning horizon: 5, 15, 30},height=9.5cm]
+\centering
+% Replace example-image-a with the path to your plot.
+\includegraphics[width=\linewidth,height=8cm,keepaspectratio]{example-image-a}
+\end{tcolorbox}
+\begin{answer}{Description: planning horizon}
+% Describe the observed trend as the planning horizon changes and explain why it occurs.
+\end{answer}
+\newpage
+\begin{tcolorbox}[colback=white,colframe=black!60,title={Candidate sequences: 100, 1000},height=9.5cm]
+\centering
+% Replace example-image-a with the path to your plot.
+\includegraphics[width=\linewidth,height=8cm,keepaspectratio]{example-image-a}
+\end{tcolorbox}
+\begin{answer}{Description: number of candidate sequences}
+% Describe the observed trend as the number of candidate sequences changes and explain why it occurs.
+\end{answer}
+\newpage
+\begin{tcolorbox}[colback=white,colframe=black!60,title={Ensemble size: 1, 3, 5},height=9.5cm]
+\centering
+% Replace example-image-a with the path to your plot.
+\includegraphics[width=\linewidth,height=8cm,keepaspectratio]{example-image-a}
+\end{tcolorbox}
+\begin{answer}{Description: ensemble size}
+% Describe the observed trend as the ensemble size changes and explain why it occurs.
+\end{answer}
+\newpage
+\subsection*{Discussion (0.75 points)}
+Imagine you have a learned dynamics model that achieves low multi-step prediction error over the MPC planning horizon on held-out trajectories, but MPC using this model performs poorly. Give reasons why this could happen. Answer in 4--6 sentences.
+\begin{answer}{Discussion answer}
+% Write your answer in 4--6 sentences.
+\end{answer}
+\end{document}

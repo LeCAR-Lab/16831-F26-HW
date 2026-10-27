@@ -1,0 +1,380 @@
+\documentclass{article} % For LaTeX2e
+\usepackage{forest}
+\usepackage{url}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{algorithm2e}
+\usepackage{graphicx}
+\usepackage{color}
+\usepackage{listings}
+\usepackage{verbatim}
+
+\usepackage[parfill]{parskip}
+
+
+\usepackage{xcolor}
+\usepackage{titleps}
+\usepackage[letterpaper, margin=0.95in]{geometry}
+\usepackage{url}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{mathtools}
+\usepackage{enumitem}
+\usepackage{tabu}
+\usepackage{parskip}
+\usepackage{natbib}
+\usepackage{listings}
+
+\newcommand{\xb}{\mathbf{x}}
+\newcommand{\yb}{\mathbf{y}}
+\newcommand{\wb}{\mathbf{w}}
+\newcommand{\Xb}{\mathbf{X}}
+\newcommand{\Yb}{\mathbf{Y}}
+\newcommand{\tr}{^T}
+\newcommand{\hb}{\mathbf{h}}
+\newcommand{\Hb}{\mathbf{H}}
+
+\DeclareFontShape{OT1}{cmtt}{bx}{n}{<5><6><7><8><9><10><10.95><12><14.4><17.28><20.74><24.88>cmttb10}{}
+
+
+\usepackage{forest}
+
+\usepackage{hyperref}
+\usepackage{forest}
+\definecolor{light-yellow}{HTML}{FFE5CC}
+
+
+\newcommand{\bs}{\mathbf{s}}
+\newcommand{\ba}{\mathbf{a}}
+\newcommand{\bA}{\mathbf{A}}
+
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,
+    urlcolor=blue,
+}
+
+\usepackage{courier}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\footnotesize\ttfamily,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    %numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+\newcommand{\cmt}[1]{{\footnotesize\textcolor{red}{#1}}}
+\newcommand{\todo}[1]{\cmt{TO-DO: #1}}
+
+\title{Assignment 4: Model-Based Reinforcement Learning\\
+\textbf{Fall 2026 -- Due November 12, 11:59 pm}}
+
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+
+\section{Introduction}
+
+This assignment requires you to implement and evaluate a pipeline for model-based reinforcement learning: learn a dynamics function from observed state transitions, then use predictions from that model to choose actions. There are four required problems, worth 3.75 points each, for a total of 15 points.
+
+
+
+\section{Model-Based Reinforcement Learning}
+
+We will now provide a brief overview of model-based reinforcement learning (MBRL), and the specific type of MBRL you will be implementing in this homework.
+
+MBRL consists primarily of two aspects: (1) learning a dynamics model and (2) using the learned dynamics models to plan and execute actions that minimize a cost function (or maximize a reward function).
+
+\subsection{Dynamics Model}
+
+In this assignment, you will learn a neural network dynamics model $f_\theta$ of the form
+\begin{align}
+\hat{\Delta}_{t+1} &= f_\theta(\bs_t, \ba_t)
+\end{align}
+which predicts the change in state given the current state and action. So given the prediction $\hat{\Delta}_{t+1}$, you can generate the next prediction with
+\begin{align}
+\hat{\bs}_{t+1} &= \bs_t + \hat{\Delta}_{t+1} .
+\end{align}
+See the \href{https://arxiv.org/pdf/1708.02596.pdf}{referenced paper} for intuition on why we might want our network to predict state differences, instead of directly predicting next state.
+
+You will train $f_\theta$ in a standard supervised learning setup, by performing gradient descent on the following objective:
+\begin{align}
+\mathcal{L}(\theta) &= \sum_{(\bs_t, \ba_t, \bs_{t+1}) \in \mathcal{D}} \| (\bs_{t+1} - \bs_t) - f_\theta(\bs_t, \ba_t) \|_2^2 \\
+&= \sum_{(\bs_t, \ba_t, \bs_{t+1}) \in \mathcal{D}} \| \Delta_{t+1} - \hat{\Delta}_{t+1} \|_2^2 \label{eqn:train-dynamics}
+\end{align}
+
+In practice, it's helpful to normalize the target of a neural network.
+So in the code, we'll train the network to predict a \emph{normalized} version of the change in state, as in
+\begin{align}
+\mathcal{L}(\theta) &= \sum_{(\bs_t, \ba_t, \bs_{t+1}) \in \mathcal{D}} \| \text{Normalize}(\bs_{t+1} - \bs_t) - f_\theta(\bs_t, \ba_t) \|_2^2.
+\end{align}
+Since $f_\theta$ is trained to predict the normalized state difference, you generate the next prediction with
+\begin{align}
+\hat{\bs}_{t+1} &= \bs_t + \text{Unnormalize}(f_\theta(\bs_t, \ba_t)).
+\end{align}
+
+\subsection{Action Selection}
+
+Given the learned dynamics model, we now want to select and execute actions that minimize a known cost function (or maximize a known reward function). Ideally, you would calculate these actions by solving the following optimization:
+\begin{align}
+\ba_t^* &= \arg\min_{\ba_{t:\infty}} \sum_{t'=t}^\infty c(\hat{\bs}_{t'}, \ba_{t'}) \;\;\text{where}\;\; \hat{\bs}_{t'+1} = \hat{\bs}_{t'} + f_\theta(\hat{\bs}_{t'}, \ba_{t'}). \label{eqn:action-selection-full}
+\end{align}
+However, solving Eqn.~\ref{eqn:action-selection-full} is impractical for two reasons: (1) planning over an infinite sequence of actions is impossible and (2) the learned dynamics model is imperfect, so using it to plan in such an open-loop manner will lead to accumulating errors over time and planning far into the future will become very inaccurate.
+
+Instead, one alternative is to solve the following gradient-free optimization problem:
+\begin{align}
+\bA^* &= \arg\min_{\{\bA^{(0)}, ..., \bA^{(K-1)}\}} \sum_{t'=t}^{t+H-1} c(\hat{\bs}_{t'}, \ba_{t'}) \;\;\text{s.t.}\;\; \hat{\bs}_{t'+1} = \hat{\bs}_{t'} + f_\theta(\hat{\bs}_{t'}, \ba_{t'}), \label{eqn:action-selection-mpc}
+\end{align}
+in which $\bA^{(k)} = (a_t^{(k)}, \dots, a_{t+H-1}^{(k)})$ are each a random action sequence of length $H$. What Eqn.~\ref{eqn:action-selection-mpc} says is to consider $K$ random action sequences of length $H$, predict the result (i.e., future states) of taking each of these action sequences using the learned dynamics model $f_\theta$, evaluate the cost/reward associated with each candidate action sequence, and select the best action sequence. Note that this approach only plans $H$ steps into the future, which is desirable because it prevent accumulating model error, but is also limited because it may not be sufficient for solving long-horizon tasks.
+
+Additionally, since our model is imperfect and things will never go perfectly according to plan, we adopt a model predictive control (MPC) approach, where at every time step we perform random-shooting to select the best $H$-step action sequence, but then we execute only the first action from that sequence before replanning again at the next time step using updated state information. This reduces the effect of compounding errors when using our approximate dynamics model to plan too far into the future.
+
+
+
+\subsection{On-Policy Data Collection}
+
+Although MBRL is in theory off-policy---meaning it can learn from any data---in practice it will perform poorly if you don't have on-policy data. In other words, if a model is trained on only randomly-collected data, it will (in most cases) be insufficient to describe the parts of the state space that we may actually care about. We can therefore use on-policy data collection in an iterative algorithm to improve overall task performance. This is summarized as follows:
+
+\begin{algorithm}[H]
+ \caption{Model-Based RL with On-Policy Data}
+\SetAlgoLined
+  Run base policy $\pi_0(\ba_t, \bs_t)$ (e.g., random policy) to collect $\mathcal{D} = \{(\bs_t, \ba_t, \bs_{t+1})\}$ \\
+  \While{not done}{
+    Train $f_\theta$ using $\mathcal{D}$ (Eqn.~\ref{eqn:train-dynamics}) \\
+    $\bs_t \leftarrow$ current agent state \\
+    \For{\text{rollout number} $m=0$ to $M$}{
+        \For{\text{timestep} $t=0$ to $T$}{
+          $\bA^* = \pi_{\text{MPC}}(\ba_t, \bs_t)$ where $\pi_{\text{MPC}}$ is obtained from random-shooting\\
+          $\ba_t \leftarrow$ first action in $\bA^*$ \\
+          Execute $\ba_t$ and proceed to next state $\bs_{t+1}$ \\
+          Add $(\bs_t, \ba_t, \bs_{t+1})$ to $\mathcal{D}$
+        }
+    }
+  }
+\end{algorithm}
+
+\subsection{Ensembles}
+A simple and effective way to improve predictions is to use an ensemble of models.
+The idea is simple: rather than training one network $f_\theta$ to make predictions, we'll train $N$ independently initialized networks $\{f_{\theta_n}\}_{n=1}^N$, and average their predictions to get your final predictions
+\begin{align}
+    f(s_t, a_t) = \frac{1}{N} \sum_{n=1}^N f_{\theta_n}(s_t, a_t).
+\end{align}
+In this assignment, you'll train an ensemble of networks and compare how different values of $N$ effect the model's performance.
+
+\section{Code}
+
+You will implement the model-based RL algorithm described above. See \texttt{README.md} for Python, MuJoCo, local, and Colab setup instructions.
+
+\subsection{Overview}
+
+Obtain the code from
+\url{https://github.com/LeCAR-Lab/16831-F26-HW/tree/main/hw4}. \\
+
+For the four problems of the assignment, you will add code to the following three files:
+\begin{itemize}
+\item \verb+rob831/hw4_part1/agents/mb_agent.py+
+\item \verb+rob831/hw4_part1/models/ff_model.py+
+\item \verb+rob831/hw4_part1/policies/MPC_policy.py+
+\end{itemize}
+You will also need to edit these files by copying code from past homeworks or Piazza:
+\begin{itemize}
+\item \verb+rob831/hw4_part1/infrastructure/rl_trainer.py+
+\item \verb+rob831/hw4_part1/infrastructure/utils.py+
+\end{itemize}
+
+\newpage
+\section*{Problem 1 (3.75 points)}
+
+\underline{What you will implement:}\\
+Collect a large dataset by executing random actions. Train a neural network dynamics model on this fixed dataset and visualize the resulting predictions. The implementation that you will do here will be for training the dynamics model, and comparing its predictions against ground truth. You will be reusing the utilities you wrote for HW1 (or Piazza) for the data collection part (look for ``get this from Piazza'' markers).
+
+\underline{What code files to fill in:}
+\begin{enumerate}
+    \item \verb+rob831/hw4_part1/agents/mb_agent.py+
+    \item \verb+rob831/hw4_part1/models/ff_model.py+
+    \item \verb+rob831/hw4_part1/infrastructure/utils.py+
+    \item \verb+rob831/hw4_part1/policies/MPC_policy.py+ (just one line labeled \verb+TODO(Q1)+ for now)
+\end{enumerate}
+
+
+\underline{What commands to run:}
+\begin{lstlisting}[escapechar=@]
+python rob831/hw4_part1/scripts/run_hw4_mb.py --exp_name q1_cheetah_n500_arch1x32 --env_name cheetah-hw4_part1-v0 --add_sl_noise --n_iter 1 --batch_size_initial 20000 --num_agent_train_steps_per_iter 500 --n_layers 1 --size 32 --scalar_log_freq -1 --video_log_freq -1 --mpc_action_sampling_strategy 'random'
+
+python rob831/hw4_part1/scripts/run_hw4_mb.py --exp_name q1_cheetah_n5_arch2x250 --env_name cheetah-hw4_part1-v0 --add_sl_noise --n_iter 1 --batch_size_initial 20000 --num_agent_train_steps_per_iter 5 --n_layers 2 --size 250 --scalar_log_freq -1 --video_log_freq -1 --mpc_action_sampling_strategy 'random'
+
+python rob831/hw4_part1/scripts/run_hw4_mb.py --exp_name q1_cheetah_n500_arch2x250 --env_name cheetah-hw4_part1-v0 --add_sl_noise --n_iter 1 --batch_size_initial 20000 --num_agent_train_steps_per_iter 500 --n_layers 2 --size 250  --scalar_log_freq -1 --video_log_freq -1 --mpc_action_sampling_strategy 'random'
+\end{lstlisting}
+
+Your code will produce plots inside your logdir that illustrate your model prediction error (MPE). The code will also produce a plot of the losses over time. For the first command, the loss should go below 0.2 by the iteration 500. These plots illustrate, for a fixed action sequence, the difference between your model's predictions (red) and the ground-truth states (green). Each plot corresponds to a different state element, and the title reports the mean mean-squared-error across all state elements. As illustrated in the commands above, try different neural network architectures as well different amounts of training. Compare the results by looking at the loss values (i.e., itr\_0\_losses.png), the qualitative model predictions (i.e., itr\_0\_predictions.png), as well as the quantitative MPE values (i.e., in the title of itr\_0\_predictions.png).\\
+
+\underline{What to submit:} For this question, submit the qualitative model predictions (itr\_0\_predictions.png) for each of the three runs above. Comment on which model performs the best and why you think this might be the case.
+
+Note that for these qualitative model prediction plots, we intend for you to just copy the png images produced by the code.
+
+
+\newpage
+\section*{Problem 2 (3.75 points)}
+
+\underline{What will you implement:}\\
+Action selection using your learned dynamics model and a given reward function.
+
+\underline{What code files to fill in:}
+\begin{enumerate}
+    \item \verb+rob831/hw4_part1/policies/MPC_policy.py+ (all sections labeled \verb+TODO(Q2)+)
+\end{enumerate}
+
+\underline{What commands to run:}\\
+\begin{lstlisting}[escapechar=@]
+python rob831/hw4_part1/scripts/run_hw4_mb.py --exp_name q2_obstacles_singleiteration --env_name obstacles-hw4_part1-v0 --add_sl_noise --num_agent_train_steps_per_iter 20 --n_iter 1 --batch_size_initial 5000 --batch_size 1000 --mpc_horizon 10 --video_log_freq -1 --mpc_action_sampling_strategy 'random'
+\end{lstlisting}
+
+Recall the overall flow of our rl\_trainer.py. We first collect data with our policy (which starts as random), we then train our model on that collected data, and we then evaluate the resulting MPC policy (which now uses the trained model). To verify that your MPC is indeed doing reasonable action selection, run the command above and compare Train\_AverageReturn (which was the execution of random actions) to Eval\_AverageReturn (which was the execution of MPC using a model that was trained on the randomly collected training data). You can expect Train\_AverageReturn to be around -160 and Eval\_AverageReturn to be around -70 to -50.
+
+\underline{What to submit:}\\
+Submit this run as part of your run\_logs, and include a plot of Train\_AverageReturn and Eval\_AverageReturn in your pdf. Note that these will just be single dots on the plot, since we ran this for just 1 iteration.
+
+
+\newpage
+\section*{Problem 3 (3.75 points)}
+
+\underline{What will you implement:}\\ \\
+MBRL algorithm with on-policy data collection and iterative model training.
+
+\underline{What code files to fill in:}\\ \\
+None. You should already have done everything that you need, because rl\_trainer.py already aggregates your collected data into a replay buffer. Thus, iterative training means to just train on our growing replay buffer while collecting new data at each iteration using the most newly trained model.
+
+\underline{What commands to run:}
+\begin{lstlisting}[escapechar=@]
+python rob831/hw4_part1/scripts/run_hw4_mb.py --exp_name q3_obstacles --env_name obstacles-hw4_part1-v0 --add_sl_noise --num_agent_train_steps_per_iter 20 --batch_size_initial 5000 --batch_size 1000 --mpc_horizon 10 --n_iter 12 --video_log_freq -1 --mpc_action_sampling_strategy 'random'
+
+python rob831/hw4_part1/scripts/run_hw4_mb.py --exp_name q3_reacher --env_name reacher-hw4_part1-v0 --add_sl_noise --mpc_horizon 10 --num_agent_train_steps_per_iter 1000 --batch_size_initial 5000 --batch_size 5000 --n_iter 15 --video_log_freq -1 --mpc_action_sampling_strategy 'random'
+
+python rob831/hw4_part1/scripts/run_hw4_mb.py --exp_name q3_cheetah --env_name cheetah-hw4_part1-v0 --mpc_horizon 15 --add_sl_noise --num_agent_train_steps_per_iter 1500 --batch_size_initial 5000 --batch_size 5000 --n_iter 20 --video_log_freq -1 --mpc_action_sampling_strategy 'random'
+\end{lstlisting}
+
+You should expect rewards of around -25 to -20 for the obstacles env (takes ~40 minutes), rewards of around -250 to -300 for the reacher env (takes 2-3 hours), and rewards of around 250-350 for the cheetah env {takes 3-4 hours}. All numbers assume no GPU.
+
+\underline{What to submit:}\\
+Submit these runs as part of your run\_logs, and include the performance plots in your pdf.
+
+
+
+
+
+
+
+
+\newpage
+\section*{Problem 4 (3.75 points)}
+
+\subsection*{Hyperparameter Comparison (3 points)}
+
+\underline{What will you implement:}\\
+You will compare the performance of your MBRL algorithm as a function of three hyperparameters: the number of models in your ensemble, the number of random action sequences considered during each action selection, and the MPC planning horizon.
+
+\underline{What code files to fill in:}\\
+None.
+
+\underline{What commands to run:}\\
+\begin{lstlisting}[escapechar=@]
+python rob831/hw4_part1/scripts/run_hw4_mb.py --exp_name q4_reacher_horizon5 --env_name reacher-hw4_part1-v0 --add_sl_noise --mpc_horizon 5 --num_agent_train_steps_per_iter 1000 --batch_size 800 --n_iter 15 --video_log_freq -1 --mpc_action_sampling_strategy 'random'
+
+python rob831/hw4_part1/scripts/run_hw4_mb.py --exp_name q4_reacher_horizon15 --env_name reacher-hw4_part1-v0 --add_sl_noise --mpc_horizon 15 --num_agent_train_steps_per_iter 1000 --batch_size 800 --n_iter 15 --video_log_freq -1 --mpc_action_sampling_strategy 'random'
+
+python rob831/hw4_part1/scripts/run_hw4_mb.py --exp_name q4_reacher_horizon30 --env_name reacher-hw4_part1-v0 --add_sl_noise --mpc_horizon 30 --num_agent_train_steps_per_iter 1000 --batch_size 800 --n_iter 15 --video_log_freq -1 --mpc_action_sampling_strategy 'random'
+
+
+python rob831/hw4_part1/scripts/run_hw4_mb.py --exp_name q4_reacher_numseq100 --env_name reacher-hw4_part1-v0 --add_sl_noise --mpc_horizon 10 --num_agent_train_steps_per_iter 1000 --batch_size 800 --n_iter 15 --mpc_num_action_sequences 100 --video_log_freq -1 --mpc_action_sampling_strategy 'random'
+
+python rob831/hw4_part1/scripts/run_hw4_mb.py --exp_name q4_reacher_numseq1000 --env_name reacher-hw4_part1-v0 --add_sl_noise --mpc_horizon 10 --num_agent_train_steps_per_iter 1000 --batch_size 800 --n_iter 15 --video_log_freq -1 --mpc_num_action_sequences 1000 --mpc_action_sampling_strategy 'random'
+
+python rob831/hw4_part1/scripts/run_hw4_mb.py --exp_name q4_reacher_ensemble1 --env_name reacher-hw4_part1-v0 --ensemble_size 1 --add_sl_noise --mpc_horizon 10 --num_agent_train_steps_per_iter 1000 --batch_size 800 --n_iter 15 --video_log_freq -1 --mpc_action_sampling_strategy 'random'
+
+python rob831/hw4_part1/scripts/run_hw4_mb.py --exp_name q4_reacher_ensemble3 --env_name reacher-hw4_part1-v0 --ensemble_size 3 --add_sl_noise --mpc_horizon 10 --num_agent_train_steps_per_iter 1000 --batch_size 800 --n_iter 15 --video_log_freq -1 --mpc_action_sampling_strategy 'random'
+
+python rob831/hw4_part1/scripts/run_hw4_mb.py --exp_name q4_reacher_ensemble5 --env_name reacher-hw4_part1-v0 --ensemble_size 5 --add_sl_noise --mpc_horizon 10 --num_agent_train_steps_per_iter 1000 --batch_size 800 --n_iter 15 --video_log_freq -1 --mpc_action_sampling_strategy 'random'
+\end{lstlisting}
+
+\underline{What to submit:}\\
+1) Submit these runs as part of your run\_logs.\\ \\
+2) Include plots for the following comparisons. For each plot, describe the observed trend and explain it in the description block directly below the plot in \texttt{hw4\_submission.tex}:\\
+\begin{itemize}
+    \item effect of ensemble size
+    \item effect of the number of candidate action sequences
+    \item efffect of planning horizon
+\end{itemize}
+
+Be sure to include titles and legends on all of your plots, and be sure to generate your plots by extracting the corresponding performance numbers from your saved tensorboard eventfiles.
+
+
+\newpage
+\subsection*{Discussion (0.75 points)}
+
+Imagine you have a learned dynamics model that achieves low multi-step prediction error over the MPC planning horizon on held-out trajectories, but MPC using this model performs poorly. Give reasons why this could happen. Answer in 4--6 sentences.
+
+Include your response in the discussion answer block at the end of Problem 4 in \texttt{hw4\_submission.tex}.
+
+\newpage
+\section*{Submission}
+
+\subsection{Submitting the PDF}
+Use \texttt{hw4\_submission.tex} to prepare a PDF containing the plots and responses for Problems 1--4. Each problem is worth 3.75 points. Acknowledge your collaborators, including generative AI tools, where applicable.
+
+\subsection{Submitting the Code and Logs}
+In order to turn in your code and experiment logs, create a folder that contains the following:
+\begin{itemize}
+    \item A folder named \texttt{run\_logs} with all the experiment runs from this assignment.
+    \textbf{Do not change the names originally assigned to the folders, as specified by \texttt{exp\_name} in the instructions.}
+    To minimize submissions size, please include runs with video logging disabled. If you would like to reuse your video logging runs, please see the script provided in \verb+rob831/hw4_part1/scripts/filter_events.py+.
+    \item The \texttt{rob831} folder with all the \texttt{.py} files, with the same names and directory structure as the original homework repository (not include the \texttt{data/} folder). A plotting script should also be submitted, which should be a python script (or jupyter notebook) such that running it can generate all plots from your pdf. This plotting script should extract its values directly from the experiments in your \texttt{run\_logs} and should not have hardcoded reward values.
+\end{itemize}
+
+As an example, the unzipped version of your submission should result in the following file structure. \textbf{Make sure that the submit.zip file is below 15MB and that they include the prefix \texttt{hw4\_q1\_}, \texttt{hw4\_q2\_}, \texttt{hw4\_q3\_}, or \texttt{hw4\_q4\_}.}
+
+\begin{verbatim}
+submit/
+  run_logs/
+    hw4_q1_.../
+    hw4_q2_.../
+    hw4_q3_.../
+    hw4_q4_.../
+  rob831/hw4_part1/...
+  plotting_script.py
+  README.md
+\end{verbatim}
+
+
+If you are a Mac user, \textbf{do not use the default ``Compress'' option to create the zip}. It creates artifacts that the autograder does not like. You may use \texttt{zip -vr submit.zip submit -x "*.DS\_Store"} from your terminal.
+
+
+Turn in your assignment on Gradescope. Upload the zip file with your code and log files to \textbf{HW4 Code}, and upload the PDF of your report to \textbf{HW4}.
+
+\end{document}
