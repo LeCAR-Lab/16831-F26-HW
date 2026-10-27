@@ -9,6 +9,6 @@ pyvirtualdisplay==3.0
 torch==1.12.1
 opencv-python==4.6.0.66
 ipdb==0.13.9
-swig==4.0.2
-box2d-py==2.3.8
+Box2D==2.3.10
 networkx==2.5
+setuptools==80.9.0
