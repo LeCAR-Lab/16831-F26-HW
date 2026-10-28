@@ -11,10 +11,21 @@ You can run this code on your own machine or on Google Colab.
    python -m pip install -e .
    ```
 
-2. **Colab:** The first few sections of the notebook will install all required dependencies. You can try out the Colab option by clicking the badges below:
+2. **Colab:** Before running the setup cells, select **Runtime → Change runtime type**, set **Runtime version** to **2025.07** and **Hardware accelerator** to **T4 GPU**, then save. The first few sections of the notebook will install all required dependencies. Open the notebook using the badge below:
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/LeCAR-Lab/16831-F26-HW/blob/main/hw4/rob831/hw4_part1/scripts/run_hw4_mb.ipynb) **Model Based Learning**
 
+If Colab asks you to restart after installing dependencies, restart the session, re-run the setup cells upto the clone homework repo cell. In that cell, comment the repository cloning and requirements installation commands. Do:
+
+```
+%cd $SYM_PATH
+# !git clone https://github.com/LeCAR-Lab/16831-F26-HW.git
+%cd 16831-F26-HW/hw4
+# %pip install -r requirements_colab.txt
+%pip install -e .
+```
+
+Continue with **set up virtual display**. You do not need to clone the repository or reinstall the requirements after this restart.
 
 ## Complete the code
 
