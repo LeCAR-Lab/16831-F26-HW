@@ -11,6 +11,14 @@ You can run this code on your own machine or on Google Colab.
    python -m pip install -e .
    ```
 
+   **Optional Linux GPU setup:** If training fails with `CUDA error: no kernel image is available for execution on the device` on an NVIDIA Ampere or Ada GPU (such as an RTX 3090 or RTX 6000 Ada), install the CUDA 11.6 build of PyTorch in the same environment after the commands above:
+
+   ```bash
+   python -m pip install --upgrade "torch==1.12.1+cu116" --extra-index-url https://download.pytorch.org/whl/cu116
+   ```
+
+   Then rerun training. This keeps PyTorch at version 1.12.1 while replacing its CUDA build.
+
 2. **Colab:** Before running the setup cells, select **Runtime → Change runtime type**, set **Runtime version** to **2025.07** and **Hardware accelerator** to **T4 GPU**, then save. The first few sections of the notebook will install all required dependencies. Open the notebook using the badge below:
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/LeCAR-Lab/16831-F26-HW/blob/main/hw4/rob831/hw4_part1/scripts/run_hw4_mb.ipynb) **Model Based Learning**
